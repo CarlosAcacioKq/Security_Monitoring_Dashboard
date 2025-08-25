@@ -537,14 +537,6 @@ Your screenshots demonstrate enterprise-level capabilities that immediately impr
 
 ---
 
-## 📞 **Support & Contact**
-
-### **Project Maintainer:**
-**Carlos Acacio**  
-- **GitHub**: [@CarlosAcacioKq](https://github.com/CarlosAcacioKq)
-- **LinkedIn**: [Carlos Acacio](https://linkedin.com/in/carlos-acacio)
-- **Email**: carlos.acacio@example.com
-
 ### **Getting Help:**
 1. **Check the documentation** in this README
 2. **Review existing issues** on GitHub
