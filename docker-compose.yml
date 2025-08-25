@@ -1,0 +1,155 @@
+# =============================================================================
+# ENTERPRISE SECURITY MONITORING DASHBOARD - DOCKER COMPOSE CONFIGURATION
+# =============================================================================
+
+version: '3.8'
+
+services:
+  
+  # =============================================================================
+  # MAIN SECURITY MONITORING DASHBOARD
+  # =============================================================================
+  security-monitor:
+    build: .
+    container_name: security-dashboard
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro  # Read-only environment variables
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=sqlite:///data/security_monitor.db
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - security-monitoring
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.security-dashboard.rule=Host(`security.localhost`)"
+
+  # =============================================================================
+  # THREAT INTELLIGENCE PROCESSOR (Optional Background Service)
+  # =============================================================================
+  threat-processor:
+    build: .
+    container_name: threat-intel-processor
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=sqlite:///data/security_monitor.db
+    command: ["python", "production_threat_intel.py"]
+    depends_on:
+      - security-monitor
+    restart: unless-stopped
+    networks:
+      - security-monitoring
+
+  # =============================================================================
+  # REDIS CACHE (Optional - for API response caching)
+  # =============================================================================
+  redis-cache:
+    image: redis:7-alpine
+    container_name: security-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - security-monitoring
+    profiles:
+      - "full"  # Only start with --profile full
+
+  # =============================================================================
+  # POSTGRESQL DATABASE (Optional - for production scaling)
+  # =============================================================================
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: security-postgres
+    environment:
+      POSTGRES_DB: security_monitor
+      POSTGRES_USER: siem_user
+      POSTGRES_PASSWORD: secure_password_change_in_production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - security-monitoring
+    profiles:
+      - "postgres"  # Only start with --profile postgres
+
+  # =============================================================================
+  # NGINX REVERSE PROXY (Optional - for production deployment)
+  # =============================================================================
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: security-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - security-monitor
+    restart: unless-stopped
+    networks:
+      - security-monitoring
+    profiles:
+      - "production"  # Only start with --profile production
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+networks:
+  security-monitoring:
+    driver: bridge
+    name: security-monitoring-network
+
+# =============================================================================
+# VOLUME CONFIGURATION
+# =============================================================================
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+# =============================================================================
+# USAGE EXAMPLES:
+# =============================================================================
+#
+# Basic development setup:
+#   docker-compose up -d
+#
+# Full setup with Redis caching:
+#   docker-compose --profile full up -d
+#
+# PostgreSQL setup:
+#   docker-compose --profile postgres up -d
+#
+# Production setup with all services:
+#   docker-compose --profile production --profile postgres --profile full up -d
+#
+# View logs:
+#   docker-compose logs -f security-monitor
+#
+# Scale threat processors:
+#   docker-compose up -d --scale threat-processor=3
+# 
+# =============================================================================

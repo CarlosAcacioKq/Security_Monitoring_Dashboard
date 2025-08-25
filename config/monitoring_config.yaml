@@ -1,0 +1,114 @@
+collectors:
+  windows_events:
+    enabled: true
+    collection_interval: 60  # seconds
+    event_types:
+      - 4624  # Successful logon
+      - 4625  # Failed logon
+      - 4648  # Logon with explicit credentials
+      - 4672  # Special privileges assigned
+      - 4720  # User account created
+      - 4726  # User account deleted
+      
+  syslog:
+    enabled: false
+    log_paths:
+      - "/var/log/auth.log"
+      - "/var/log/secure"
+      - "/var/log/messages"
+    collection_interval: 30
+    
+  network_devices:
+    enabled: false
+    devices:
+      - name: "core-switch-01"
+        type: "cisco"
+        log_path: "\\\\network-device\\logs\\switch01.log"
+      - name: "firewall-01"
+        type: "palo_alto"
+        log_path: "\\\\firewall\\logs\\traffic.csv"
+
+detection:
+  enabled: true
+  real_time: true
+  rules:
+    brute_force:
+      enabled: true
+      threshold: 5
+      time_window_minutes: 10
+    unusual_time_access:
+      enabled: true
+      business_hours_start: 9
+      business_hours_end: 17
+    privilege_escalation:
+      enabled: true
+      monitored_processes:
+        - "psexec"
+        - "wmic"
+        - "powershell"
+        - "cmd"
+    suspicious_network:
+      enabled: true
+      monitor_external_connections: true
+    data_exfiltration:
+      enabled: true
+      file_access_threshold: 50
+      time_window_hours: 1
+
+analytics:
+  baseline_update_interval: 86400  # 24 hours in seconds
+  baseline_window_days: 30
+  anomaly_detection: true
+  anomaly_threshold: 2.0  # standard deviations
+  
+alerting:
+  email_enabled: true
+  summary_reports: true
+  summary_interval: 86400  # 24 hours
+  notification_rules:
+    critical:
+      email: true
+      sms: true
+      immediate: true
+      recipients:
+        - "security-team@company.com"
+        - "soc-manager@company.com"
+    high:
+      email: true
+      sms: false
+      immediate: true
+      recipients:
+        - "security-team@company.com"
+    medium:
+      email: true
+      sms: false
+      immediate: false
+      recipients:
+        - "security-analysts@company.com"
+    low:
+      email: false
+      sms: false
+      immediate: false
+      recipients: []
+
+compliance:
+  frameworks:
+    - "PCI-DSS"
+    - "SOX"
+  evaluation_interval: 3600  # 1 hour
+  auto_remediation: false
+  audit_retention_days: 2555  # 7 years
+
+database:
+  connection_pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+  partition_by_date: true
+  retention_days: 365
+
+logging:
+  level: "INFO"
+  file: "security_monitor.log"
+  max_size_mb: 100
+  backup_count: 5

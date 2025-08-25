@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(copy \".env.example\" \".env\")",
+      "Bash(cp:*)",
+      "Bash(notepad .env)",
+      "Bash(mkdir:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
